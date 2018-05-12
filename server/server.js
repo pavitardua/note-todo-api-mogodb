@@ -54,7 +54,7 @@ app.get('/todos/:id',(req,res)=>{
     Todo.findById(id).then((todo)=>{
         res.send({todo});
     },(e)=>{
-        res.status(400).send(e);
+        res.status(404).send(e);
     });
 });
 //DELETE /todos/:id
