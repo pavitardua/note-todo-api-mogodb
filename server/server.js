@@ -123,7 +123,7 @@ app.post('/users/login',(req,res)=>{
 app.listen(PORT,()=>{
     console.log(`Started on port ${PORT}`);
 });
-
+module.exports = {app};
 // var newTodo = new Todo({
 //     text:"Eat Lunch",
 //     completed:false
@@ -160,4 +160,3 @@ app.listen(PORT,()=>{
 //     console.log('Unable to Save user');
 // });
 
-module.exports = {app};
