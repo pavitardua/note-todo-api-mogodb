@@ -2,26 +2,13 @@ const expect = require('expect');
 const request = require('supertest');
 const {ObjectID} = require('mongodb');
 
-var {app} = require('./../server');
-var {Todo} = require('./../models/todo');
-
-const todos1 = [{
-    _id: new ObjectID(),
-    text:'First Test to do'
-},{
-    _id: new ObjectID(),    
-    text:'Second Test to do',
-    completed:true,
-    completedAt:333    
-}
-];
-
+const {app} = require('./../server');
+const {Todo} = require('./../models/todo');
+const {User} = require('./../models/user');
+const {todos1,populateTodos,users,populateUsers} = require('./seed/seed');
 //testing lifecycle method
-beforeEach((done)=>{
-    Todo.remove({}).then(()=>{
-        return Todo.insertMany(todos1);
-    }).then(()=>done());
-});
+beforeEach(populateUsers);
+beforeEach(populateTodos);
 
 describe('POST /todos',()=>{
    
@@ -175,4 +162,77 @@ describe('PATCH /todos/:id',()=>{
         })
         .end(done);
     });
+});
+
+describe('GET /users/me',()=>{
+    it('should return a user if authenticated',(done)=>{
+        request(app)
+        .get('/users/me')
+        .set('x-auth',users[0].tokens[0].token)
+        .expect(200)
+        .expect((res)=>{
+            expect(res.body._id).toBe(users[0]._id.toHexString());
+            expect(res.body.email).toBe(users[0].email);
+        })
+        .end(done);
+    });
+    it('should return a 401 if not authenticated',(done)=>{
+        request(app)
+        .get('/users/me')        
+        .expect(401)
+        .expect((res)=>{
+            expect(res.body).toEqual({});            
+        })
+        .end(done);
+    });
+});
+
+describe('POST /users',()=>{
+    it('should create a user',(done)=>{
+        var name = 'exampleName';
+        var email = 'example@example.com';
+        var password = '123mnb!';
+        request(app)
+        .post('/users')
+        .send({name,email,password})
+        .expect(200)
+        .expect((res)=>{
+            //toExist() changed to tobeTruthy 
+            expect(res.headers['x-auth']).toBeTruthy();//since - in name so using [] instead of . notation            
+            expect(res.body._id).toBeTruthy();
+            expect(res.body.email).toBe(email);
+        })
+        .end((err)=>{
+            if(err){
+                return done(err);
+            }
+
+            User.findOne({email}).then((user)=>{
+                // console.log(user);
+                expect(user).toBeTruthy();
+                expect(user.password).not.toBe(password);
+                done();
+            });
+        });
+    });
+    it('should return validation errors if invalid request',(done)=>{
+        var name = 'exampleName';
+        var email = '11exampleexample.com';
+        var password = '123mnb!';
+        request(app)
+        .post('/users')
+        .send({name,email,password})
+        .expect(400)        
+        .end(done);
+    });
+    it('should no create user if email in use',(done)=>{
+        var name = '222Name';
+        var email = users[0].email;
+        var password = '123mnb!';
+        request(app)
+        .post('/users')
+        .send({name,email,password})
+        .expect(400)        
+        .end(done);
+    });    
 });
